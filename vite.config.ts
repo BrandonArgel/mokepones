@@ -7,6 +7,7 @@ const paths = [
   "api",
   "assets",
   "components",
+  "context",
   "hooks",
   "pages",
   "styles",

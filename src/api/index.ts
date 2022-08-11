@@ -1,1 +1,1 @@
-export { getUserId } from './mokepones';
+export { getUserId, getMokepons, chooseMokepon, deleteMokepon } from './mokepons';
