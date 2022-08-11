@@ -9,7 +9,7 @@ import Map from "@assets/images/map.png";
 const Play = () => {
 	const navigate = useNavigate();
 	const { userId, mokepon, setMokepon } = useContext(UserContext);
-	const refreshIntervalRef = useRef<number>();
+	const reshIntervalRef = useRef<number>();
 	const userRef = useRef({} as Mokepon);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -126,7 +126,7 @@ const Play = () => {
 	};
 
 	const initGame = () => {
-		refreshIntervalRef.current = window.setInterval(drawPlayers, 50);
+		reshIntervalRef.current = window.setInterval(drawPlayers, 50);
 
 		window.addEventListener("keydown", (e) => keyPressed(e));
 		window.addEventListener("keyup", (e) => stopMovement(e));
@@ -148,7 +148,7 @@ const Play = () => {
 
 	const quitGame = async () => {
 		const res = await deleteMokepon(userId);
-		if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+		clearInterval(reshIntervalRef.current);
 
 		if (res.statusCode === 200) {
 			setMokepon({} as MokeponType);
@@ -173,6 +173,7 @@ const Play = () => {
 		<div>
 			<p>{mokepon.name}</p>
 			<canvas ref={canvasRef} width={500} height={500} />
+			{/* Arrow buttons for smartphone */}
 			<button onClick={quitGame}>Quit</button>
 		</div>
 	);
