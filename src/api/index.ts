@@ -1,1 +1,1 @@
-export { getUserId, getMokepons, chooseMokepon, deleteMokepon } from './mokepons';
+export { getUserId, getMokepons, chooseMokepon, deleteMokepon, sendPosition, setAFK } from './mokepons';

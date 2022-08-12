@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Response } from "@utils/types";
+import { Response, Position } from "@utils/types";
 // const API_BASE_URL = "https://mokepones-api.herokuapp.com/"
 const API_BASE_URL = "http://localhost:3005/";
 
@@ -23,5 +23,13 @@ export const chooseMokepon = async (mokepon: string, id: string): Promise<Respon
   .catch(err => console.log(err.message));
 
 export const deleteMokepon = async (id: string): Promise<Response> => await api.delete(`mokepon/${id}`)
+  .then(res => res.data)
+  .catch(err => console.log(err.message));
+
+export const sendPosition = async (x: number, y: number, id: string): Promise<Position[]> => await api.post(`mokepon/${id}/position`, { x, y })
+  .then(res => res.data.enemies)
+  .catch(err => console.log(err.message));
+
+export const setAFK = async (afk: boolean, id: string): Promise<Response> => await api.post(`mokepon/${id}/afk`, { afk })
   .then(res => res.data)
   .catch(err => console.log(err.message));

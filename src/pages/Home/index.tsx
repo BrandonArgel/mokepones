@@ -7,7 +7,8 @@ import styles from "./Home.module.scss";
 
 const Home = () => {
 	const navigate = useNavigate();
-	const { setUserId, mokepon, setMokepon } = useContext(UserContext);
+	const { setUserId, mokepon, setMokepon, mokeponsAvailable, setMokeponsAvailable } =
+		useContext(UserContext);
 	const [mokepons, setMokepons] = useState([]);
 
 	const initUser = async () => {
@@ -25,7 +26,7 @@ const Home = () => {
 
 	const initialRequest = async () => {
 		const data = await getMokepons();
-		setMokepons(data);
+		setMokeponsAvailable(data);
 	};
 
 	useEffect(() => {
@@ -36,8 +37,8 @@ const Home = () => {
 			<h1 className={styles.home__title}>Mokepones</h1>
 			<h2 className={styles.home__subtitle}>Choose your mokepon</h2>
 			<div className={styles.mokepons}>
-				{mokepons.length > 0 &&
-					mokepons.map((m: MokeponType) => (
+				{mokeponsAvailable.length > 0 &&
+					mokeponsAvailable.map((m: MokeponType) => (
 						<button
 							key={m.id}
 							onClick={() => setMokepon(m)}

@@ -15,3 +15,11 @@ export interface Response {
   status: string;
   statusCode: number;
 }
+
+export interface Position {
+  id: string;
+  mokepon: string;
+  afk: boolean;
+  x: number;
+  y: number;
+}

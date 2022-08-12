@@ -1,17 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { useContext, useEffect, useRef, useState } from "react";
 import { UserContext } from "@context";
-import { chooseMokepon, deleteMokepon } from "@api";
+import { chooseMokepon, deleteMokepon, sendPosition, setAFK } from "@api";
 import { Attack, MokeponType } from "@utils/types";
 import { random } from "@utils";
 import Map from "@assets/images/map.png";
+import styles from "./Play.module.scss";
 
 const Play = () => {
 	const navigate = useNavigate();
-	const { userId, mokepon, setMokepon } = useContext(UserContext);
+	const { userId, mokepon, setMokepon, mokeponsAvailable } = useContext(UserContext);
 	const reshIntervalRef = useRef<number>();
+	const intervalXRef = useRef<number>();
+	const intervalYRef = useRef<number>();
 	const userRef = useRef({} as Mokepon);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	let enemies = [] as Mokepon[];
 
 	class Mokepon {
 		name: string;
@@ -24,6 +28,7 @@ const Play = () => {
 		y: number;
 		speedX: number;
 		speedY: number;
+		afk: boolean;
 
 		constructor(name: string, mini: string, attacks: Attack[], id: string) {
 			this.name = name;
@@ -37,11 +42,18 @@ const Play = () => {
 			this.y = random(0, canvasRef.current!.height - this.heigth);
 			this.speedX = 0;
 			this.speedY = 0;
+			this.afk = false;
 		}
 
 		draw() {
 			const ctx = canvasRef.current!.getContext("2d");
-			ctx!.drawImage(this.mini, this.x, this.y, this.width, this.heigth);
+			if (this.afk) {
+				ctx!.globalAlpha = 0.5;
+				ctx!.drawImage(this.mini, this.x, this.y, this.width, this.heigth);
+				ctx!.globalAlpha = 1.0;
+			} else {
+				ctx!.drawImage(this.mini, this.x, this.y, this.width, this.heigth);
+			}
 		}
 	}
 
@@ -69,6 +81,29 @@ const Play = () => {
 		userRef.current.y = newPosition;
 	};
 
+	const sendCoordinates = async () => {
+		const newEnemies = await sendPosition(userRef.current.x, userRef.current.y, userId);
+
+		enemies = newEnemies.map((enemy) => {
+			const enemyTemplate = mokeponsAvailable.find((mokepon) => mokepon.name === enemy.mokepon);
+
+			if (enemyTemplate) {
+				const newEnemy = new Mokepon(
+					enemyTemplate!.name,
+					enemyTemplate!.mini,
+					enemyTemplate!.attacks,
+					enemy!.id
+				);
+
+				newEnemy.x = enemy.x;
+				newEnemy.y = enemy.y;
+				newEnemy.afk = enemy.afk;
+
+				return newEnemy;
+			}
+		}) as Mokepon[];
+	};
+
 	const drawPlayers = () => {
 		const ctx = canvasRef.current!.getContext("2d");
 		const img = new Image();
@@ -78,58 +113,95 @@ const Play = () => {
 		checkBordersY();
 		userRef.current.draw();
 
-		// Send position to server
+		sendCoordinates();
 
-		// Draw other players
+		enemies.forEach((enemy) => {
+			enemy.draw();
+			if (enemy.afk) return;
+			checkCollision(enemy);
+		});
 	};
 
-	const moveUp = () => (userRef.current.speedY = -5);
-	const moveDown = () => (userRef.current.speedY = 5);
-	const moveLeft = () => (userRef.current.speedX = -5);
-	const moveRight = () => (userRef.current.speedX = 5);
+	const checkCollision = (enemy: Mokepon) => {
+		const topEnemy = enemy.y;
+		const bottomEnemy = enemy.y + enemy.heigth;
+		const leftEnemy = enemy.x;
+		const rightEnemy = enemy.x + enemy.width;
+		const topUser = userRef.current.y;
+		const bottomUser = userRef.current.y + userRef.current.heigth;
+		const leftUser = userRef.current.x;
+		const rightUser = userRef.current.x + userRef.current.width;
 
-	const keyPressed = (e: KeyboardEvent) => {
-		switch (e.key) {
-			case "ArrowUp":
-				moveUp();
-				break;
-			case "ArrowDown":
-				moveDown();
-				break;
-			case "ArrowLeft":
-				moveLeft();
-				break;
-			case "ArrowRight":
-				moveRight();
-				break;
-			default:
-				break;
+		if (
+			bottomUser < topEnemy ||
+			topUser > bottomEnemy ||
+			rightUser < leftEnemy ||
+			leftUser > rightEnemy
+		) {
+			return;
 		}
+
+		userRef.current.speedX = 0;
+		userRef.current.speedY = 0;
+		handleSetAFK();
+		alert("Collision with" + enemy.id);
 	};
 
-	const stopX = () => (userRef.current.speedX = 0);
-	const stopY = () => (userRef.current.speedY = 0);
-
-	const stopMovement = (e: KeyboardEvent) => {
-		switch (e.key) {
-			case "ArrowUp":
-			case "ArrowDown":
-				stopY();
-				break;
-			case "ArrowLeft":
-			case "ArrowRight":
-				stopX();
-				break;
-			default:
-				break;
+	const moveMokepon = (e: MouseEvent) => {
+		if (intervalXRef.current || intervalYRef.current) {
+			clearInterval(intervalXRef.current);
+			clearInterval(intervalYRef.current);
 		}
+		const { clientX, clientY } = e;
+		const newX = clientX - userRef.current.width / 2;
+		const newY = clientY - userRef.current.heigth;
+
+		intervalXRef.current = window.setInterval(() => {
+			if (userRef.current.x < newX) {
+				userRef.current.x += 1;
+			} else if (userRef.current.x > newX) {
+				userRef.current.x -= 1;
+			} else {
+				clearInterval(intervalXRef.current);
+				intervalXRef.current = 0;
+			}
+		}, 10);
+
+		intervalYRef.current = window.setInterval(() => {
+			if (userRef.current.y < newY) {
+				userRef.current.y += 1;
+			} else if (userRef.current.y > newY) {
+				userRef.current.y -= 1;
+			} else {
+				clearInterval(intervalYRef.current);
+				intervalYRef.current = 0;
+			}
+		}, 10);
 	};
 
 	const initGame = () => {
 		reshIntervalRef.current = window.setInterval(drawPlayers, 50);
 
-		window.addEventListener("keydown", (e) => keyPressed(e));
-		window.addEventListener("keyup", (e) => stopMovement(e));
+		canvasRef.current!.addEventListener("click", moveMokepon);
+		window.addEventListener("visibilitychange", onVisibilityChange);
+	};
+
+	const onVisibilityChange = () => {
+		if (document.visibilityState !== "visible") {
+			handleSetAFK();
+		} else {
+			handleUnsetAFK();
+		}
+	};
+
+	const handleSetAFK = () => {
+		clearInterval(reshIntervalRef.current);
+		setAFK(true, userId);
+	};
+
+	const handleUnsetAFK = () => {
+		initGame();
+		setAFK(false, userId);
 	};
 
 	const initMokepon = async () => {
@@ -156,12 +228,6 @@ const Play = () => {
 		}
 	};
 
-	// If you have been still for more than 15 seconds
-	const setMokeponAFK = () => {
-		// Set mokepon afk
-		// Clear interval
-	};
-
 	useEffect(() => {
 		window.addEventListener("beforeunload", quitGame);
 
@@ -170,10 +236,10 @@ const Play = () => {
 		};
 	}, []);
 	return (
-		<div>
+		<div className={styles.container}>
 			<p>{mokepon.name}</p>
 			<canvas ref={canvasRef} width={500} height={500} />
-			{/* Arrow buttons for smartphone */}
+
 			<button onClick={quitGame}>Quit</button>
 		</div>
 	);

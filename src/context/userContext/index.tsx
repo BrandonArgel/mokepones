@@ -10,11 +10,14 @@ const UserContext = createContext({
 	setUserId: (userId: string) => {},
 	mokepon: {} as MokeponType,
 	setMokepon: (mokepon: MokeponType) => {},
+	mokeponsAvailable: [] as MokeponType[],
+	setMokeponsAvailable: (mokeponsAvailable: MokeponType[]) => {},
 });
 
 const UserProvider = ({ children }: userContextProps) => {
 	const [userId, setUserId] = useState("");
 	const [mokepon, setMokepon] = useState({} as MokeponType);
+	const [mokeponsAvailable, setMokeponsAvailable] = useState<MokeponType[]>([]);
 
 	return (
 		<UserContext.Provider
@@ -23,6 +26,8 @@ const UserProvider = ({ children }: userContextProps) => {
 				setUserId,
 				mokepon,
 				setMokepon,
+				mokeponsAvailable,
+				setMokeponsAvailable,
 			}}
 		>
 			{children}
